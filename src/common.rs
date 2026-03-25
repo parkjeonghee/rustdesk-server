@@ -11,6 +11,8 @@ use std::{
     time::{Instant, SystemTime},
 };
 
+pub const API_PORT: i32 = 21120;
+
 #[allow(dead_code)]
 pub(crate) fn get_expired_time() -> Instant {
     let now = Instant::now();

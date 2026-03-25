@@ -148,9 +148,9 @@ impl RendezvousServer {
         std::env::set_var("PORT_FOR_API", port.to_string());
         // Start the HTTP API server for external peer management
         let api_db = rs.pm.db.clone();
-        let api_port = get_arg_or("api-port", hbb_common::config::API_PORT.to_string())
+        let api_port = get_arg_or("api-port", crate::common::API_PORT.to_string())
             .parse::<i32>()
-            .unwrap_or(hbb_common::config::API_PORT);
+            .unwrap_or(crate::common::API_PORT);
         log::info!("Listening on API :{}", api_port);
         tokio::spawn(async move {
             crate::api_server::start_api_server(api_db, api_port).await;

@@ -2,7 +2,7 @@
 // https://blog.csdn.net/bytxl/article/details/44344855
 
 use flexi_logger::*;
-use hbb_common::{bail, config::{RENDEZVOUS_PORT, API_PORT}, ResultType};
+use hbb_common::{bail, config::RENDEZVOUS_PORT, ResultType};
 use hbbs::{common::*, *};
 
 const RMEM: usize = 0;
