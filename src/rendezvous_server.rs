@@ -146,6 +146,15 @@ impl RendezvousServer {
         log::info!("mask: {:?}", rs.inner.mask);
         log::info!("local-ip: {:?}", rs.inner.local_ip);
         std::env::set_var("PORT_FOR_API", port.to_string());
+        // Start the HTTP API server for external peer management
+        let api_db = rs.pm.db.clone();
+        let api_port = get_arg_or("api-port", hbb_common::config::API_PORT.to_string())
+            .parse::<i32>()
+            .unwrap_or(hbb_common::config::API_PORT);
+        log::info!("Listening on API :{}", api_port);
+        tokio::spawn(async move {
+            crate::api_server::start_api_server(api_db, api_port).await;
+        });
         rs.parse_relay_servers(&get_arg("relay-servers"));
         let mut listener = create_tcp_listener(port).await?;
         let mut listener2 = create_tcp_listener(nat_port).await?;
