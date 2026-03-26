@@ -1,4 +1,4 @@
-# Stage 1: Build
+# Stage 1: Build (linux/amd64에서 cargo build 수행)
 FROM rust:1.85-bookworm AS builder
 
 WORKDIR /build
