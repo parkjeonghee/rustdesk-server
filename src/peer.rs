@@ -129,6 +129,10 @@ impl PeerMap {
             }
             log::info!("pk updated instead of insert");
         }
+        // Mark peer online in DB
+        if let Err(err) = self.db.update_peer_status(&id, 1).await {
+            log::error!("db.update_peer_status failed: {}", err);
+        }
         register_pk_response::Result::OK
     }
 
@@ -176,5 +180,16 @@ impl PeerMap {
     #[inline]
     pub(crate) async fn is_in_memory(&self, id: &str) -> bool {
         self.map.read().await.contains_key(id)
+    }
+
+    /// Returns list of (id, elapsed_ms) for all in-memory peers
+    pub(crate) async fn get_all_in_memory_peers_elapsed(&self) -> Vec<(String, i32)> {
+        let map = self.map.read().await;
+        let mut result = Vec::with_capacity(map.len());
+        for (id, peer) in map.iter() {
+            let elapsed = peer.read().await.last_reg_time.elapsed().as_millis() as i32;
+            result.push((id.clone(), elapsed));
+        }
+        result
     }
 }

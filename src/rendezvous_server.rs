@@ -104,6 +104,10 @@ impl RendezvousServer {
         let nat_port = port - 1;
         let ws_port = port + 2;
         let pm = PeerMap::new().await?;
+        // Mark all peers offline on startup
+        if let Err(err) = pm.db.set_all_peer_status_offline().await {
+            log::error!("Failed to reset peer status on startup: {}", err);
+        }
         log::info!("serial={}", serial);
         let rendezvous_servers = get_servers(&get_arg("rendezvous-servers"), "rendezvous-servers");
         log::info!("Listening on tcp/udp :{}", port);
@@ -247,6 +251,7 @@ impl RendezvousServer {
         key: &str,
     ) -> LoopFailure {
         let mut timer_check_relay = interval(Duration::from_millis(CHECK_RELAY_TIMEOUT));
+        let mut timer_status_sweep = interval(Duration::from_secs(REG_TIMEOUT as u64 / 1000));
         loop {
             tokio::select! {
                 _ = timer_check_relay.tick() => {
@@ -257,6 +262,19 @@ impl RendezvousServer {
                             check_relay_servers(rs, tx).await;
                         });
                     }
+                }
+                _ = timer_status_sweep.tick() => {
+                    let pm = self.pm.clone();
+                    tokio::spawn(async move {
+                        let peers = pm.get_all_in_memory_peers_elapsed().await;
+                        for (id, elapsed) in peers {
+                            if elapsed >= REG_TIMEOUT {
+                                if let Err(err) = pm.db.update_peer_status(&id, 0).await {
+                                    log::error!("Failed to mark peer {} offline: {}", id, err);
+                                }
+                            }
+                        }
+                    });
                 }
                 Some(data) = rx.recv() => {
                     match data {
@@ -612,6 +630,16 @@ impl RendezvousServer {
         };
         if let Some(old) = ip_change {
             log::info!("IP change of {} from {} to {}", id, old, socket_addr);
+        }
+        // Mark peer online in DB
+        if !request_pk {
+            let db = self.pm.db.clone();
+            let id_clone = id.clone();
+            tokio::spawn(async move {
+                if let Err(err) = db.update_peer_status(&id_clone, 1).await {
+                    log::error!("Failed to update peer status to online: {}", err);
+                }
+            });
         }
         let mut msg_out = RendezvousMessage::new();
         msg_out.set_register_peer_response(RegisterPeerResponse {

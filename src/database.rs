@@ -173,6 +173,22 @@ impl Database {
         }).collect())
     }
 
+    pub async fn update_peer_status(&self, id: &str, status: i64) -> ResultType<()> {
+        sqlx::query("update peer set status=? where id=?")
+            .bind(status)
+            .bind(id)
+            .execute(self.pool.get().await?.deref_mut())
+            .await?;
+        Ok(())
+    }
+
+    pub async fn set_all_peer_status_offline(&self) -> ResultType<u64> {
+        let result = sqlx::query("update peer set status=0 where status=1")
+            .execute(self.pool.get().await?.deref_mut())
+            .await?;
+        Ok(result.rows_affected())
+    }
+
     pub async fn delete_peer(&self, id: &str) -> ResultType<u64> {
         let result = sqlx::query("delete from peer where id = ?")
             .bind(id)
